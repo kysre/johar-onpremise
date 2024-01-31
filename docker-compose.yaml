@@ -1,0 +1,56 @@
+version: "3"
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=johar
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    restart: unless-stopped
+    volumes:
+      - pg_data:/var/lib/postgresql/data/
+
+  cache:
+    image: redis:alpine3.18
+    restart: unless-stopped
+
+  frontend:
+    image: kysre/johar-frontend:latest
+    restart: unless-stopped
+
+  backend:
+    image: kysre/johar:latest
+    environment:
+      - DJANGO_SETTINGS_MODULE=johar.settings.production
+      - ALLOWED_HOSTS=*
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/johar
+      - REDIS_HOST=cache
+      - NEWS_REDIS_DB=1
+    restart: unless-stopped
+    depends_on:
+      - db
+      - cache
+    volumes:
+      - static:/code/static
+      - media:/code/media
+
+  reverse_proxy:
+    build:
+      context: ./nginx
+    restart: unless-stopped
+    depends_on:
+      - backend
+      - frontend
+    ports:
+      - "8000:80"
+    volumes:
+      - static:/usr/share/nginx/html/backend/static
+      - media:/usr/share/nginx/html/backend/media
+
+volumes:
+  pg_data:
+    driver: local
+  static:
+    driver: local
+  media:
+    driver: local
