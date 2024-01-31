@@ -15,21 +15,28 @@ services:
     restart: unless-stopped
 
   frontend:
-    image: kysre/johar-frontend:latest
+    image: kysre/johar-frontend:${FRONTEND_IMAGE_TAG}
     restart: unless-stopped
+    deploy:
+      mode: replicated
+      replicas: ${FRONTEND_REPLICA_COUNT}
 
   backend:
-    image: kysre/johar:latest
+    image: kysre/johar:${BACKEND_IMAGE_TAG}
     environment:
       - DJANGO_SETTINGS_MODULE=johar.settings.production
       - ALLOWED_HOSTS=*
       - DATABASE_URL=postgres://postgres:postgres@db:5432/johar
       - REDIS_HOST=cache
       - NEWS_REDIS_DB=1
+      - NEWS_SUGGESTION_COUNT=5
     restart: unless-stopped
     depends_on:
       - db
       - cache
+    deploy:
+      mode: replicated
+      replicas: ${BACKEND_REPLICA_COUNT}
     volumes:
       - static:/code/static
       - media:/code/media
